@@ -32,6 +32,9 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: NoteRepository
     private val _userId = MutableStateFlow<String?>(null)
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
     val dailyNotes: StateFlow<List<DailyNotes>>
 
     private val _currentText = MutableStateFlow("")
@@ -53,7 +56,10 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         val syncManager = NoteSyncManager(dao, viewModelScope)
         repository = NoteRepository(dao, syncManager, viewModelScope)
 
-        dailyNotes = userNotes
+        dailyNotes = combine(_searchQuery, userNotes) { query, notes ->
+            if (query.isBlank()) notes
+            else notes.filter { it.content.contains(query, ignoreCase = true) }
+        }
             .map { notes -> groupNotesByDate(notes) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -74,6 +80,14 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
     fun onUserSignedOut() {
         repository.stopSync()
         _userId.value = null
+    }
+
+    fun onSearchChange(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun clearSearch() {
+        _searchQuery.value = ""
     }
 
     fun onTextChange(text: String) {

@@ -21,11 +21,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -56,6 +58,7 @@ fun NoteScreen(viewModel: NoteViewModel, onSignOut: () -> Unit) {
     val dailyNotes by viewModel.dailyNotes.collectAsState()
     val currentText by viewModel.currentText.collectAsState()
     val editingNote by viewModel.editingNote.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
     val context = LocalContext.current
 
     val isSpeechAvailable = remember {
@@ -118,8 +121,27 @@ fun NoteScreen(viewModel: NoteViewModel, onSignOut: () -> Unit) {
                 onVoiceClick = ::launchVoiceInput
             )
 
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = viewModel::onSearchChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp),
+                placeholder = { Text("Search notes...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = viewModel::clearSearch) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear search")
+                        }
+                    }
+                },
+                singleLine = true
+            )
+
             NoteList(
                 dailyNotes = dailyNotes,
+                isSearchActive = searchQuery.isNotEmpty(),
                 onNoteClick = viewModel::selectNote,
                 onEdit = viewModel::startEditing,
                 onDelete = viewModel::deleteNote,
@@ -190,6 +212,7 @@ private fun NoteInputArea(
 @Composable
 private fun NoteList(
     dailyNotes: List<DailyNotes>,
+    isSearchActive: Boolean,
     onNoteClick: (Note) -> Unit,
     onEdit: (Note) -> Unit,
     onDelete: (Note) -> Unit,
@@ -201,16 +224,24 @@ private fun NoteList(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                "No notes yet",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
-            Text(
-                "Tap the mic or type to create one",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-            )
+            if (isSearchActive) {
+                Text(
+                    "No notes matching search",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+            } else {
+                Text(
+                    "No notes yet",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+                Text(
+                    "Tap the mic or type to create one",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                )
+            }
         }
     } else {
         LazyColumn(
