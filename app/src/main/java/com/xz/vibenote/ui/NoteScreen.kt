@@ -7,6 +7,7 @@ import android.speech.SpeechRecognizer
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -113,6 +114,7 @@ fun NoteScreen(viewModel: NoteViewModel) {
 
             NoteList(
                 dailyNotes = dailyNotes,
+                onNoteClick = viewModel::selectNote,
                 onEdit = viewModel::startEditing,
                 onDelete = viewModel::deleteNote,
                 modifier = Modifier.weight(1f)
@@ -182,6 +184,7 @@ private fun NoteInputArea(
 @Composable
 private fun NoteList(
     dailyNotes: List<DailyNotes>,
+    onNoteClick: (Note) -> Unit,
     onEdit: (Note) -> Unit,
     onDelete: (Note) -> Unit,
     modifier: Modifier = Modifier
@@ -212,7 +215,7 @@ private fun NoteList(
                     DateHeader(group.dateLabel)
                 }
                 items(group.notes, key = { it.id }) { note ->
-                    NoteCard(note = note, onEdit = onEdit, onDelete = onDelete)
+                    NoteCard(note = note, onClick = onNoteClick, onEdit = onEdit, onDelete = onDelete)
                 }
             }
         }
@@ -232,6 +235,7 @@ private fun DateHeader(label: String) {
 @Composable
 private fun NoteCard(
     note: Note,
+    onClick: (Note) -> Unit,
     onEdit: (Note) -> Unit,
     onDelete: (Note) -> Unit
 ) {
@@ -241,6 +245,7 @@ private fun NoteCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
+            .clickable { onClick(note) }
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(

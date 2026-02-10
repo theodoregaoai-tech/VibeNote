@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -33,6 +34,9 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
     private val _editingNote = MutableStateFlow<Note?>(null)
     val editingNote: StateFlow<Note?> = _editingNote.asStateFlow()
 
+    private val _selectedNoteId = MutableStateFlow<Long?>(null)
+    val selectedNote: StateFlow<Note?>
+
     init {
         val dao = NoteDatabase.getDatabase(application).noteDao()
         repository = NoteRepository(dao)
@@ -40,6 +44,10 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         dailyNotes = repository.allNotes
             .map { notes -> groupNotesByDate(notes) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+        selectedNote = combine(_selectedNoteId, repository.allNotes) { id, notes ->
+            id?.let { noteId -> notes.find { it.id == noteId } }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
     }
 
     fun onTextChange(text: String) {
@@ -67,13 +75,25 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun selectNote(note: Note) {
+        _selectedNoteId.value = note.id
+    }
+
+    fun clearSelection() {
+        _selectedNoteId.value = null
+    }
+
     fun deleteNote(note: Note) {
+        if (_selectedNoteId.value == note.id) {
+            _selectedNoteId.value = null
+        }
         viewModelScope.launch {
             repository.delete(note)
         }
     }
 
     fun startEditing(note: Note) {
+        _selectedNoteId.value = null
         _editingNote.value = note
         _currentText.value = note.content
     }
