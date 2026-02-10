@@ -5,9 +5,10 @@ A minimal Android app for creating daily notes using voice input or text.
 ## Features
 
 - **Voice-to-text** — Tap the mic button to dictate notes using Android's built-in speech recognition
+- **Note detail view** — Tap a note card to view it full-screen with date, time, and content
 - **Local persistence** — Notes stored in a Room database, available offline
 - **Daily grouping** — Notes organized by date (Today, Yesterday, or full date)
-- **Edit & delete** — Tap the pencil icon to edit or the trash icon to remove a note
+- **Edit & delete** — Edit or delete notes from the list or the detail screen
 
 ## Tech Stack
 
@@ -23,8 +24,9 @@ A minimal Android app for creating daily notes using voice input or text.
 ./gradlew connectedDebugAndroidTest  # Run UI tests
 ```
 
-## Screenshot
+## Screenshots
 
-<img src="https://github.com/user-attachments/assets/placeholder" width="300" alt="VibeNote screenshot">
-
-<!-- Replace the placeholder above with an actual screenshot -->
+<p float="left">
+  <img src="screenshots/note_list.png" width="300" alt="Note list screen">
+  <img src="screenshots/note_detail.png" width="300" alt="Note detail screen">
+</p>
