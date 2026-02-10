@@ -14,4 +14,5 @@
 .cxx
 local.properties
 firebase-debug.log
+app/google-services.json
 .kotlin

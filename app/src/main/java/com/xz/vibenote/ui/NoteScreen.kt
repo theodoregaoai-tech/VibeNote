@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -51,7 +52,7 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NoteScreen(viewModel: NoteViewModel) {
+fun NoteScreen(viewModel: NoteViewModel, onSignOut: () -> Unit) {
     val dailyNotes by viewModel.dailyNotes.collectAsState()
     val currentText by viewModel.currentText.collectAsState()
     val editingNote by viewModel.editingNote.collectAsState()
@@ -90,6 +91,11 @@ fun NoteScreen(viewModel: NoteViewModel) {
         topBar = {
             TopAppBar(
                 title = { Text("VibeNote") },
+                actions = {
+                    IconButton(onClick = onSignOut) {
+                        Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Sign out")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer

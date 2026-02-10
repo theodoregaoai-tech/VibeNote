@@ -6,11 +6,15 @@ import androidx.lifecycle.viewModelScope
 import com.xz.vibenote.data.Note
 import com.xz.vibenote.data.NoteDatabase
 import com.xz.vibenote.data.NoteRepository
+import com.xz.vibenote.sync.NoteSyncManager
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -23,8 +27,10 @@ data class DailyNotes(
     val notes: List<Note>
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class NoteViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: NoteRepository
+    private val _userId = MutableStateFlow<String?>(null)
 
     val dailyNotes: StateFlow<List<DailyNotes>>
 
@@ -37,17 +43,37 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedNoteId = MutableStateFlow<Long?>(null)
     val selectedNote: StateFlow<Note?>
 
+    private val userNotes = _userId.flatMapLatest { uid ->
+        if (uid != null) repository.getNotesForUser(uid)
+        else flowOf(emptyList())
+    }
+
     init {
         val dao = NoteDatabase.getDatabase(application).noteDao()
-        repository = NoteRepository(dao)
+        val syncManager = NoteSyncManager(dao, viewModelScope)
+        repository = NoteRepository(dao, syncManager, viewModelScope)
 
-        dailyNotes = repository.allNotes
+        dailyNotes = userNotes
             .map { notes -> groupNotesByDate(notes) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-        selectedNote = combine(_selectedNoteId, repository.allNotes) { id, notes ->
+        selectedNote = combine(_selectedNoteId, userNotes) { id, notes ->
             id?.let { noteId -> notes.find { it.id == noteId } }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    }
+
+    fun onUserSignedIn(userId: String) {
+        if (_userId.value == userId) return
+        _userId.value = userId
+        viewModelScope.launch {
+            repository.claimNotesForUser(userId)
+            repository.startSync(userId)
+        }
+    }
+
+    fun onUserSignedOut() {
+        repository.stopSync()
+        _userId.value = null
     }
 
     fun onTextChange(text: String) {
@@ -65,11 +91,12 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             val editing = _editingNote.value
+            val userId = _userId.value
             if (editing != null) {
-                repository.update(editing.copy(content = text))
+                repository.update(editing.copy(content = text), userId)
                 _editingNote.value = null
             } else {
-                repository.insert(Note(content = text))
+                repository.insert(Note(content = text), userId)
             }
             _currentText.value = ""
         }
@@ -88,7 +115,7 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
             _selectedNoteId.value = null
         }
         viewModelScope.launch {
-            repository.delete(note)
+            repository.delete(note, _userId.value)
         }
     }
 
@@ -101,6 +128,11 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
     fun cancelEditing() {
         _editingNote.value = null
         _currentText.value = ""
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        repository.stopSync()
     }
 
     private fun groupNotesByDate(notes: List<Note>): List<DailyNotes> {
