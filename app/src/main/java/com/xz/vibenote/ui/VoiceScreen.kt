@@ -277,8 +277,12 @@ fun VoiceScreen(viewModel: NoteViewModel) {
                 FilledIconButton(
                     onClick = {
                         stopListening()
-                        state = if (transcribedText.isNotBlank()) RecordingState.Review
-                        else RecordingState.Idle
+                        if (transcribedText.isNotBlank()) {
+                            viewModel.saveVoiceNote(transcribedText)
+                            transcribedText = ""
+                            partialText = ""
+                        }
+                        state = RecordingState.Idle
                     },
                     modifier = Modifier
                         .size(100.dp)
