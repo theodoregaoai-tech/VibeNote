@@ -17,3 +17,7 @@ firebase-debug.log
 app/google-services.json
 .mcp.json
 .kotlin
+.claude/
+.idea/
+.playwright-mcp/
+_plan/
