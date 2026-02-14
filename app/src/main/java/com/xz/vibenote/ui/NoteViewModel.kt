@@ -27,6 +27,11 @@ data class DailyNotes(
     val notes: List<Note>
 )
 
+sealed class Screen {
+    data object Voice : Screen()
+    data object Notes : Screen()
+}
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class NoteViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: NoteRepository
@@ -39,6 +44,9 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _currentText = MutableStateFlow("")
     val currentText: StateFlow<String> = _currentText.asStateFlow()
+
+    private val _currentScreen = MutableStateFlow<Screen>(Screen.Voice)
+    val currentScreen: StateFlow<Screen> = _currentScreen.asStateFlow()
 
     private val _editingNote = MutableStateFlow<Note?>(null)
     val editingNote: StateFlow<Note?> = _editingNote.asStateFlow()
@@ -142,6 +150,23 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
     fun cancelEditing() {
         _editingNote.value = null
         _currentText.value = ""
+    }
+
+    fun navigateToVoice() {
+        _currentScreen.value = Screen.Voice
+    }
+
+    fun navigateToNotes() {
+        _currentScreen.value = Screen.Notes
+    }
+
+    fun saveVoiceNote(text: String) {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return
+        viewModelScope.launch {
+            repository.insert(Note(content = trimmed), _userId.value)
+            _currentScreen.value = Screen.Notes
+        }
     }
 
     override fun onCleared() {
