@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,6 +33,7 @@ import com.xz.vibenote.ui.NoteDetailScreen
 import com.xz.vibenote.ui.NoteScreen
 import com.xz.vibenote.ui.NoteViewModel
 import com.xz.vibenote.ui.Screen
+import com.xz.vibenote.ui.SettingsScreen
 import com.xz.vibenote.ui.VoiceScreen
 import com.xz.vibenote.ui.theme.VibeNoteTheme
 
@@ -110,6 +112,14 @@ class MainActivity : ComponentActivity() {
                                         },
                                         label = { Text("Notes") }
                                     )
+                                    NavigationBarItem(
+                                        selected = currentScreen is Screen.Settings,
+                                        onClick = noteViewModel::navigateToSettings,
+                                        icon = {
+                                            Icon(Icons.Default.Settings, contentDescription = null)
+                                        },
+                                        label = { Text("Settings") }
+                                    )
                                 }
                             }
                         ) { innerPadding ->
@@ -119,6 +129,7 @@ class MainActivity : ComponentActivity() {
                                 when (currentScreen) {
                                     is Screen.Voice -> VoiceScreen(viewModel = noteViewModel)
                                     is Screen.Notes -> NoteScreen(viewModel = noteViewModel)
+                                    is Screen.Settings -> SettingsScreen(viewModel = noteViewModel)
                                 }
                             }
                         }

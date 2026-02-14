@@ -1,6 +1,12 @@
 package com.xz.vibenote.ui
 
 import android.app.Application
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.xz.vibenote.data.Note
@@ -23,6 +29,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
+
 data class DailyNotes(
     val dateLabel: String,
     val notes: List<Note>
@@ -31,6 +39,7 @@ data class DailyNotes(
 sealed class Screen {
     data object Voice : Screen()
     data object Notes : Screen()
+    data object Settings : Screen()
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -48,6 +57,11 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _currentScreen = MutableStateFlow<Screen>(Screen.Voice)
     val currentScreen: StateFlow<Screen> = _currentScreen.asStateFlow()
+
+    private val speechLanguageKey = stringPreferencesKey("speech_language")
+    val speechLanguage: StateFlow<String> = application.settingsDataStore.data
+        .map { prefs -> prefs[speechLanguageKey] ?: "" }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
     private val _editingNote = MutableStateFlow<Note?>(null)
     val editingNote: StateFlow<Note?> = _editingNote.asStateFlow()
@@ -163,6 +177,18 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
     fun navigateToNotes() {
         _currentScreen.value = Screen.Notes
+    }
+
+    fun navigateToSettings() {
+        _currentScreen.value = Screen.Settings
+    }
+
+    fun setSpeechLanguage(tag: String) {
+        viewModelScope.launch {
+            getApplication<Application>().settingsDataStore.edit { prefs ->
+                prefs[speechLanguageKey] = tag
+            }
+        }
     }
 
     fun saveAudioNote(filePath: String) {

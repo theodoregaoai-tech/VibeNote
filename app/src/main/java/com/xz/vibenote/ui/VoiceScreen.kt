@@ -44,6 +44,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -56,6 +57,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import java.util.Locale
 
 private enum class RecordingState { Idle, Recording, Review }
 
@@ -66,10 +68,12 @@ private fun formatDuration(ms: Long): String {
     return "%d:%02d".format(minutes, seconds)
 }
 
-private fun createRecognitionIntent(): Intent {
+private fun createRecognitionIntent(language: String): Intent {
+    val languageTag = language.ifEmpty { Locale.getDefault().toLanguageTag() }
     return Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
         putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
         putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+        putExtra(RecognizerIntent.EXTRA_LANGUAGE, languageTag)
     }
 }
 
@@ -108,6 +112,7 @@ private fun createRecognitionListener(
 @Composable
 fun VoiceScreen(viewModel: NoteViewModel) {
     val context = LocalContext.current
+    val speechLanguage by viewModel.speechLanguage.collectAsState()
     var state by remember { mutableStateOf(RecordingState.Idle) }
     var transcribedText by remember { mutableStateOf("") }
     var partialText by remember { mutableStateOf("") }
@@ -124,7 +129,7 @@ fun VoiceScreen(viewModel: NoteViewModel) {
                 else "$transcribedText $result"
                 partialText = ""
                 if (shouldListen) {
-                    recognizer.startListening(createRecognitionIntent())
+                    recognizer.startListening(createRecognitionIntent(speechLanguage))
                 }
             },
             onError = { error ->
@@ -133,7 +138,7 @@ fun VoiceScreen(viewModel: NoteViewModel) {
                     error == SpeechRecognizer.ERROR_NO_MATCH
                 ) {
                     if (shouldListen) {
-                        recognizer.startListening(createRecognitionIntent())
+                        recognizer.startListening(createRecognitionIntent(speechLanguage))
                     }
                 } else {
                     shouldListen = false
@@ -142,7 +147,7 @@ fun VoiceScreen(viewModel: NoteViewModel) {
                 }
             }
         ))
-        recognizer.startListening(createRecognitionIntent())
+        recognizer.startListening(createRecognitionIntent(speechLanguage))
     }
 
     fun stopListening() {
