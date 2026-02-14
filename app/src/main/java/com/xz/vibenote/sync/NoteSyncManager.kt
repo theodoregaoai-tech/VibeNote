@@ -9,6 +9,8 @@ import com.xz.vibenote.data.Note
 import com.xz.vibenote.data.NoteDao
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.tasks.await
 
 class NoteSyncManager(
@@ -17,6 +19,7 @@ class NoteSyncManager(
 ) {
     private val firestore = FirebaseFirestore.getInstance()
     private var snapshotListener: ListenerRegistration? = null
+    private val pushMutex = Mutex()
 
     companion object {
         private const val TAG = "NoteSyncManager"
@@ -27,7 +30,7 @@ class NoteSyncManager(
 
     // --- Push: Local -> Firestore ---
 
-    suspend fun pushUnsyncedNotes(userId: String) {
+    suspend fun pushUnsyncedNotes(userId: String) = pushMutex.withLock {
         val unsynced = noteDao.getUnsyncedNotes()
         for (note in unsynced) {
             try {
@@ -92,15 +95,23 @@ class NoteSyncManager(
                                         )
                                     }
                                 } else {
-                                    noteDao.insert(
-                                        Note(
-                                            firestoreId = firestoreId,
-                                            userId = userId,
-                                            content = content,
-                                            timestamp = timestamp,
-                                            isSynced = true
+                                    // Check for a local note with matching content that
+                                    // was created by a concurrent push (race between
+                                    // multiple pushUnsyncedNotes or this listener).
+                                    val duplicate = noteDao.findDuplicateNote(userId, content, timestamp)
+                                    if (duplicate != null) {
+                                        noteDao.markSynced(duplicate.id, firestoreId)
+                                    } else {
+                                        noteDao.insert(
+                                            Note(
+                                                firestoreId = firestoreId,
+                                                userId = userId,
+                                                content = content,
+                                                timestamp = timestamp,
+                                                isSynced = true
+                                            )
                                         )
-                                    )
+                                    }
                                 }
                             }
                             DocumentChange.Type.REMOVED -> {

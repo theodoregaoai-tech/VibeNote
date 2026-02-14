@@ -39,4 +39,7 @@ interface NoteDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(note: Note): Long
+
+    @Query("SELECT * FROM notes WHERE userId = :userId AND content = :content AND timestamp = :timestamp LIMIT 1")
+    suspend fun findDuplicateNote(userId: String, content: String, timestamp: Long): Note?
 }

@@ -14,15 +14,22 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -35,12 +42,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun VoiceScreen(viewModel: NoteViewModel) {
     val context = LocalContext.current
     var isRecording by remember { mutableStateOf(false) }
+    var pendingText by remember { mutableStateOf("") }
 
     val isSpeechAvailable = remember {
         SpeechRecognizer.isRecognitionAvailable(context)
@@ -55,7 +64,7 @@ fun VoiceScreen(viewModel: NoteViewModel) {
                 ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
                 ?.firstOrNull() ?: ""
             if (spokenText.isNotBlank()) {
-                viewModel.saveVoiceNote(spokenText)
+                pendingText = if (pendingText.isBlank()) spokenText else "$pendingText $spokenText"
             }
         }
     }
@@ -113,10 +122,49 @@ fun VoiceScreen(viewModel: NoteViewModel) {
             )
         }
         Spacer(modifier = Modifier.height(24.dp))
-        Text(
-            text = if (isRecording) "Listening..." else "Tap to record a note",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-        )
+
+        if (pendingText.isNotBlank()) {
+            Text(
+                text = pendingText,
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { pendingText = "" }) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Discard",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                FilledIconButton(
+                    onClick = {
+                        viewModel.saveVoiceNote(pendingText)
+                        pendingText = ""
+                    },
+                    shape = CircleShape,
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = "Save note")
+                }
+            }
+        } else {
+            Text(
+                text = if (isRecording) "Listening..." else "Tap to record a note",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+        }
     }
 }
