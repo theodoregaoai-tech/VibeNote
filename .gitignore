@@ -15,4 +15,5 @@
 local.properties
 firebase-debug.log
 app/google-services.json
+.mcp.json
 .kotlin

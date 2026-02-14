@@ -11,5 +11,8 @@ data class Note(
     val userId: String? = null,
     val content: String,
     val timestamp: Long = System.currentTimeMillis(),
-    val isSynced: Boolean = false
-)
+    val isSynced: Boolean = false,
+    val audioFilePath: String? = null
+) {
+    val isAudioNote: Boolean get() = audioFilePath != null
+}

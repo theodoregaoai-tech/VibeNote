@@ -34,10 +34,13 @@ class NoteSyncManager(
         val unsynced = noteDao.getUnsyncedNotes()
         for (note in unsynced) {
             try {
-                val noteMap = mapOf(
+                val noteMap = mutableMapOf<String, Any?>(
                     "content" to note.content,
                     "timestamp" to note.timestamp
                 )
+                if (note.audioFilePath != null) {
+                    noteMap["audioFilePath"] = note.audioFilePath
+                }
                 if (note.firestoreId != null) {
                     notesCollection(userId).document(note.firestoreId)
                         .set(noteMap, SetOptions.merge()).await()
@@ -79,6 +82,7 @@ class NoteSyncManager(
                         val firestoreId = doc.id
                         val content = doc.getString("content") ?: ""
                         val timestamp = doc.getLong("timestamp") ?: 0L
+                        val audioFilePath = doc.getString("audioFilePath")
 
                         when (change.type) {
                             DocumentChange.Type.ADDED,
@@ -90,6 +94,7 @@ class NoteSyncManager(
                                             existing.copy(
                                                 content = content,
                                                 timestamp = timestamp,
+                                                audioFilePath = audioFilePath,
                                                 isSynced = true
                                             )
                                         )
@@ -108,6 +113,7 @@ class NoteSyncManager(
                                                 userId = userId,
                                                 content = content,
                                                 timestamp = timestamp,
+                                                audioFilePath = audioFilePath,
                                                 isSynced = true
                                             )
                                         )
