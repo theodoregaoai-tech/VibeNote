@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -137,11 +138,15 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
             _selectedNoteId.value = null
         }
         viewModelScope.launch {
+            note.audioFilePath?.let { path ->
+                try { File(path).delete() } catch (_: Exception) {}
+            }
             repository.delete(note, _userId.value)
         }
     }
 
     fun startEditing(note: Note) {
+        if (note.isAudioNote) return
         _selectedNoteId.value = null
         _editingNote.value = note
         _currentText.value = note.content
@@ -158,6 +163,13 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
     fun navigateToNotes() {
         _currentScreen.value = Screen.Notes
+    }
+
+    fun saveAudioNote(filePath: String) {
+        viewModelScope.launch {
+            repository.insert(Note(content = "", audioFilePath = filePath), _userId.value)
+            _currentScreen.value = Screen.Notes
+        }
     }
 
     fun saveVoiceNote(text: String) {
